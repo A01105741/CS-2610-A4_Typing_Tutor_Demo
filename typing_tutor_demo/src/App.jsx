@@ -27,6 +27,7 @@ export default function App() {
   const [currentKey, setCurrentKey] = useState(null);
   const [nextKeys, setNextKeys] = useState([]);
   const [shiftActive, setShiftActive] = useState(false);
+  const [wrongKeyPressed, setWrongKeyPressed] = useState(false); // New state for wrong key
 
   function getRandomPhrase() {
     return phrases[Math.floor(Math.random() * phrases.length)];
@@ -40,22 +41,58 @@ export default function App() {
         return;
       }
 
-      setCurrentKey(e.code);
+      setWrongKeyPressed(false); // Reset wrong key on new press
 
       if (SHIFT_KEYS.includes(e.code)) {
+        setCurrentKey(e.code); // Set currentKey to "ShiftLeft" or "ShiftRight"
         setShiftActive(true);
         return;
       }
 
+      // Determine the identifier for the pressed key
+      let pressedKeyIdentifier = e.key.toLowerCase(); // Default for most keys
+      if (e.code === "Space") {
+        pressedKeyIdentifier = "Space";
+      } else if (shiftActive) {
+        // If Shift is active, e.key might be the shifted character (e.g., '!', 'A')
+        // We need to find the base key for display purposes
+        pressedKeyIdentifier = getBaseKey(e.key);
+      }
+      
+      setCurrentKey(pressedKeyIdentifier); // Set currentKey to the key's identifier for rendering
+
       const expectedChar = phrase[typed.length];
-      if (expectedChar === e.key) {
-        setTyped((prev) => prev + e.key);
+      let charTyped = e.key;
+
+      if (shiftActive) {
+        const baseKey = Object.entries(KEYBOARD_LAYOUT).find(([, shifted]) => shifted === expectedChar);
+        if (baseKey && baseKey[0] === charTyped) {
+          charTyped = expectedChar;
+        } else if (!baseKey && charTyped.toUpperCase() === expectedChar) {
+          charTyped = expectedChar;
+        }
+      } else {
+        if (expectedChar.match(/[A-Z]/) && charTyped === expectedChar.toLowerCase()) {
+          setWrongKeyPressed(true);
+        } else if (Object.values(KEYBOARD_LAYOUT).includes(expectedChar) && charTyped === expectedChar.toLowerCase()) {
+            setWrongKeyPressed(true);
+        }
+      }
+      
+      if (charTyped === expectedChar) {
+        setTyped((prev) => prev + charTyped);
+      } else {
+        setWrongKeyPressed(true);
+        setTimeout(() => {
+          setWrongKeyPressed(false);
+        }, 200);
       }
     }
 
     function onKeyUp(e) {
       setCurrentKey(null);
       if (SHIFT_KEYS.includes(e.code)) setShiftActive(false);
+      setWrongKeyPressed(false);
     }
 
     function preventReload(e) {
@@ -77,20 +114,31 @@ export default function App() {
       window.removeEventListener("keyup", onKeyUp);
       window.removeEventListener("keydown", preventReload);
     };
-  }, [typed, phrase]);
+  }, [typed, phrase, shiftActive]);
 
   useEffect(() => {
     const nextChar = phrase[typed.length];
     if (!nextChar) return;
 
-    if (nextChar.match(/[A-Z]/) || Object.values(KEYBOARD_LAYOUT).includes(nextChar)) {
-      setNextKeys(["ShiftLeft", "ShiftRight", getBaseKey(nextChar)]);
+    const newNextKeys = [];
+    const requiresShift = nextChar.match(/[A-Z]/) || Object.values(KEYBOARD_LAYOUT).includes(nextChar);
+
+    if (requiresShift) {
+        if (!shiftActive) {
+            // If an uppercase/shifted character is expected AND Shift is NOT active, highlight Shift keys
+            newNextKeys.push("ShiftLeft", "ShiftRight");
+        } else {
+            // If Shift is active, highlight the actual letter to be pressed
+            newNextKeys.push(getBaseKey(nextChar));
+        }
     } else if (nextChar === " ") {
-      setNextKeys(["Space"]);
+      newNextKeys.push("Space");
     } else {
-      setNextKeys([nextChar]);
+      // For regular lowercase letters/symbols, highlight only the letter
+      newNextKeys.push(nextChar);
     }
-  }, [typed, phrase]);
+    setNextKeys(newNextKeys);
+  }, [typed, phrase, shiftActive]);
 
   useEffect(() => {
     if (typed === phrase) {
@@ -99,7 +147,7 @@ export default function App() {
         setPhrase(getRandomPhrase());
       }, 1000);
     }
-  }, [typed]);
+  }, [typed, phrase]);
 
   function getBaseKey(char) {
     const entry = Object.entries(KEYBOARD_LAYOUT).find(([, shifted]) => shifted === char);
@@ -110,10 +158,28 @@ export default function App() {
     const display = shiftActive
       ? KEYBOARD_LAYOUT[keyLabel] || keyLabel.toUpperCase()
       : keyLabel;
+
+    const isCurrentlyPressed = currentKey === code;
+    let shouldBeHighlighted = nextKeys.includes(code);
+
+    // If a key is currently pressed, or if it's a Shift key and Shift is active,
+    // it should not display the red highlight.
+    if (isCurrentlyPressed || (SHIFT_KEYS.includes(code) && shiftActive)) {
+        shouldBeHighlighted = false;
+    }
+
+    // Apply 'wrong' class only if it's the wrong key and currently pressed, and not highlighted
+    const isWrongKeyDisplay = wrongKeyPressed && isCurrentlyPressed && !shouldBeHighlighted;
+
     return (
       <div
         key={code}
-        className={`keyboard-key ${code === "Space" ? "spacebar-large" : ""} ${nextKeys.includes(code) ? "highlighted" : ""} ${currentKey === code ? "pressed" : ""}`}
+        className={`keyboard-key 
+                    ${code === "Space" ? "space-bar" : ""} 
+                    ${code === "ShiftLeft" || code === "ShiftRight" ? "shift" : ""} 
+                    ${shouldBeHighlighted ? "highlighted" : ""} 
+                    ${isCurrentlyPressed ? "active" : ""} 
+                    ${isWrongKeyDisplay ? "wrong" : ""}`}
       >
         {code === "Space" ? "" : display}
       </div>
@@ -130,17 +196,19 @@ export default function App() {
   return (
     <div className="app-container">
       <h1 className="app-title">Typing Tutor</h1>
-      <div className="phrase">
-        <span className="typed-text">{typed}</span>
-        <span className="pointer">{phrase[typed.length]}</span>
-        <span className="remaining-text">{phrase.slice(typed.length + 1)}</span>
-      </div>
-      <div className="keyboard">
-        <div className="keyboard-row">{row1}</div>
-        <div className="keyboard-row">{row2}</div>
-        <div className="keyboard-row">{row3}</div>
-        <div className="keyboard-row">{row4}</div>
-        <div className="keyboard-row">{renderKey("Space", "Space")}</div>
+      <div className="content">
+        <div className="phrase">
+          <span className="typed-phrase">{typed}</span>
+          <span className="pointer">{phrase[typed.length]}</span>
+          <span className="remaining-text">{phrase.slice(typed.length + 1)}</span>
+        </div>
+        <div className="keyboard">
+          <div className="keyboard-row">{row1}</div>
+          <div className="keyboard-row">{row2}</div>
+          <div className="keyboard-row">{row3}</div>
+          <div className="keyboard-row">{row4}</div>
+          <div className="keyboard-row">{renderKey("Space", "Space")}</div>
+        </div>
       </div>
     </div>
   );

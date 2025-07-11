@@ -1,7 +1,7 @@
-html {
+:root {
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   box-sizing: border-box;
-  background: #f2f7ff;
+  background: #f2f7ff; /* Retaining background from original, not in new snippet */
 }
 
 body {
@@ -22,28 +22,6 @@ body {
   margin-bottom: 20px;
 }
 
-.phrase {
-  padding: 16px;
-  font-family: monospace;
-  font-weight: 700;
-  font-size: 1.8rem;
-  text-align: center;
-  color: #0a307c;
-}
-
-.typed-text {
-  color: green;
-}
-
-.pointer {
-  color: red;
-  text-decoration: underline;
-}
-
-.remaining-text {
-  color: #888;
-}
-
 .keyboard {
   display: flex;
   flex-direction: column;
@@ -53,7 +31,7 @@ body {
   border-radius: 8px;
   box-shadow: 0 4px 0 4px #6d6d6d;
   width: 880px;
-  margin-top: 32px;
+  margin-top: 32px; /* Added from original index.css for spacing */
 }
 
 .keyboard-row {
@@ -74,25 +52,59 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  box-shadow: 0 4px 0 2px #0006;
-  transition: all 0.1s ease;
+  box-shadow: 0 4px 0 2px rgba(0, 0, 0, 0.4); /* Equivalent to #0006 */
+  transition: all 0.05s ease;
 }
 
-.keyboard-key.pressed {
-  background-color: #3366cc;
-  transform: translateY(4px);
-  box-shadow: none;
+.space-bar {
+  width: 300px;
+}
+
+.shift {
+  width: 72px;
+}
+
+.keyboard-key.active {
+  background-color: #3366cc; /* Color from original .pressed */
+  box-shadow: 0 1px rgba(0, 0, 0, 0.4); /* Equivalent to #0006 */
+  transform: translateY(6px);
+}
+
+.keyboard-key.wrong {
+  color: red; /* Red text for wrong key */
+  box-shadow: 0 1px rgba(255, 0, 0, 0.6); /* Red shadow for wrong key */
+  transform: translateY(6px);
+}
+
+.content {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.phrase {
+  padding: 16px;
+  font-family: monospace;
+  font-weight: 700;
+  font-size: 5em;
+  text-align: center;
+  color: #0a307c80;
+}
+
+.phrase .typed-phrase {
+  color: #000;
 }
 
 .highlighted {
   box-shadow: 0 4px 0 2px #ff0000b3;
 }
 
-.keyboard-key.Space {
-  width: 300px;
+.pointer {
+  text-decoration: underline;
+  color: red; /* Retained from original index.css */
 }
 
-.spacebar-large {
-  width: 300px;
-  height: 24px;Your
-  font-size: 1.2em;
+.remaining-text {
+  color: #888; /* Retained from original index.css */
+}
